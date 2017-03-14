@@ -29,6 +29,8 @@ class Expr : public Stmt
     friend std::ostream& operator<< (std::ostream& stream, Expr * expr) {
         return stream << expr->GetPrintNameForNode();
     }
+
+	virtual llvm::Value* Emit() { return llvm::UndefValue::get(irgen->GetVoidType()); }
 };
 
 class ExprError : public Expr
@@ -56,6 +58,8 @@ class IntConstant : public Expr
     IntConstant(yyltype loc, int val);
     const char *GetPrintNameForNode() { return "IntConstant"; }
     void PrintChildren(int indentLevel);
+
+	llvm::Value* Emit();
 };
 
 class FloatConstant: public Expr 
@@ -67,6 +71,8 @@ class FloatConstant: public Expr
     FloatConstant(yyltype loc, double val);
     const char *GetPrintNameForNode() { return "FloatConstant"; }
     void PrintChildren(int indentLevel);
+
+	llvm::Value* Emit();
 };
 
 class BoolConstant : public Expr 
@@ -78,6 +84,8 @@ class BoolConstant : public Expr
     BoolConstant(yyltype loc, bool val);
     const char *GetPrintNameForNode() { return "BoolConstant"; }
     void PrintChildren(int indentLevel);
+
+	llvm::Value* Emit();
 };
 
 class VarExpr : public Expr
@@ -90,6 +98,8 @@ class VarExpr : public Expr
     const char *GetPrintNameForNode() { return "VarExpr"; }
     void PrintChildren(int indentLevel);
     Identifier *GetIdentifier() {return id;}
+
+	llvm::Value* Emit();
 };
 
 class Operator : public Node 
@@ -103,6 +113,8 @@ class Operator : public Node
     void PrintChildren(int indentLevel);
     friend ostream& operator<<(ostream& out, Operator *o) { return out << o->tokenString; }
     bool IsOp(const char *op) const;
+	
+	
  };
  
 class CompoundExpr : public Expr
@@ -116,6 +128,8 @@ class CompoundExpr : public Expr
     CompoundExpr(Operator *op, Expr *rhs);             // for unary
     CompoundExpr(Expr *lhs, Operator *op);             // for unary
     void PrintChildren(int indentLevel);
+	
+	virtual llvm::Value* Emit() { return llvm::UndefValue::get(irgen->GetVoidType()); }
 };
 
 class ArithmeticExpr : public CompoundExpr 
@@ -124,6 +138,8 @@ class ArithmeticExpr : public CompoundExpr
     ArithmeticExpr(Expr *lhs, Operator *op, Expr *rhs) : CompoundExpr(lhs,op,rhs) {}
     ArithmeticExpr(Operator *op, Expr *rhs) : CompoundExpr(op,rhs) {}
     const char *GetPrintNameForNode() { return "ArithmeticExpr"; }
+
+	llvm::Value* Emit();
 };
 
 class RelationalExpr : public CompoundExpr 
@@ -131,6 +147,8 @@ class RelationalExpr : public CompoundExpr
   public:
     RelationalExpr(Expr *lhs, Operator *op, Expr *rhs) : CompoundExpr(lhs,op,rhs) {}
     const char *GetPrintNameForNode() { return "RelationalExpr"; }
+	
+	llvm::Value* Emit();
 };
 
 class EqualityExpr : public CompoundExpr 
@@ -138,6 +156,8 @@ class EqualityExpr : public CompoundExpr
   public:
     EqualityExpr(Expr *lhs, Operator *op, Expr *rhs) : CompoundExpr(lhs,op,rhs) {}
     const char *GetPrintNameForNode() { return "EqualityExpr"; }
+
+	llvm::Value* Emit();
 };
 
 class LogicalExpr : public CompoundExpr 
@@ -146,6 +166,8 @@ class LogicalExpr : public CompoundExpr
     LogicalExpr(Expr *lhs, Operator *op, Expr *rhs) : CompoundExpr(lhs,op,rhs) {}
     LogicalExpr(Operator *op, Expr *rhs) : CompoundExpr(op,rhs) {}
     const char *GetPrintNameForNode() { return "LogicalExpr"; }
+
+	llvm::Value* Emit();
 };
 
 class AssignExpr : public CompoundExpr 
@@ -153,6 +175,8 @@ class AssignExpr : public CompoundExpr
   public:
     AssignExpr(Expr *lhs, Operator *op, Expr *rhs) : CompoundExpr(lhs,op,rhs) {}
     const char *GetPrintNameForNode() { return "AssignExpr"; }
+
+	llvm::Value* Emit();
 };
 
 class PostfixExpr : public CompoundExpr
@@ -160,6 +184,8 @@ class PostfixExpr : public CompoundExpr
   public:
     PostfixExpr(Expr *lhs, Operator *op) : CompoundExpr(lhs,op) {}
     const char *GetPrintNameForNode() { return "PostfixExpr"; }
+
+	llvm::Value* Emit();
 
 };
 
@@ -171,6 +197,8 @@ class ConditionalExpr : public Expr
     ConditionalExpr(Expr *c, Expr *t, Expr *f);
     void PrintChildren(int indentLevel);
     const char *GetPrintNameForNode() { return "ConditionalExpr"; }
+
+	llvm::Value* Emit();
 };
 
 class LValue : public Expr 
@@ -188,6 +216,8 @@ class ArrayAccess : public LValue
     ArrayAccess(yyltype loc, Expr *base, Expr *subscript);
     const char *GetPrintNameForNode() { return "ArrayAccess"; }
     void PrintChildren(int indentLevel);
+
+	llvm::Value* Emit();
 };
 
 /* Note that field access is used both for qualified names

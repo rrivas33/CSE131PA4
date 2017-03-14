@@ -20,7 +20,7 @@
 #include "errors.h"
 
 namespace llvm {
-  class Value;
+	class Value;
 }
 
 using namespace std;
@@ -37,6 +37,7 @@ struct Symbol {
   char *name;
   Decl *decl;
   EntryKind kind;
+  int someInfo;
   llvm::Value *value;
 
   Symbol() : name(NULL), decl(NULL), kind(E_VarDecl), value(NULL) {}
@@ -61,36 +62,52 @@ class ScopedTable {
     ScopedTable();
     ~ScopedTable();
 
-    void insert(Symbol &sym); 
+    void insert(Symbol &sym);
     void remove(Symbol &sym);
-    Symbol *find(const char *name);
+    Symbol* find(const char *name);
 };
    
 class SymbolTable {
   std::vector<ScopedTable *> tables;
- 
+  ScopedTable *currentScopedTable;
+  FnDecl *currentFuncDecl;
+
   public:
     SymbolTable();
     ~SymbolTable();
 
+	//Push or Pop ScopedTable from vector
     void push();
     void pop();
-
+	
+	//Insert or remove symbol from current ScopedTable
     void insert(Symbol &sym);
     void remove(Symbol &sym);
-    Symbol *find(const char *name);
 
-    bool isGlobalScope() const { return (tables.size() == 1); }
+	//Search for symbol in all tables
+    Symbol *find(const char *name);
+	
+	//Seach for symbol in current scoped table
+	Symbol *findInCurrentTable(const char *name);
+
+	Type* getCurrentFuncType();
+
+	bool isGlobalScope() const { return (tables.size() == 1); }
+
 };    
 
 class MyStack {
     vector<Stmt *> stmtStack;
+	unsigned int loops;
+	unsigned int switches;
 
   public:
-    void push(Stmt *s) { stmtStack.push_back(s); }
-    void pop()         { if (stmtStack.size() > 0 ) stmtStack.pop_back(); }
-    bool insideLoop();
-    bool insideSwitch();
+	MyStack(){loops = switches = 0;}
+
+    void push(Stmt *s);
+    void pop();
+    bool insideLoop()  {return loops > 0;}
+    bool insideSwitch(){return switches > 0;}
 };
 
 #endif

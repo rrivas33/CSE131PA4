@@ -15,6 +15,7 @@
 #include "ast.h"
 #include "list.h"
 #include <iostream>
+#include "irgen.h"
 
 using namespace std;
 
@@ -61,6 +62,8 @@ class Type : public Node
     bool IsVector();
     bool IsMatrix();
     bool IsError();
+
+	llvm::Type* typeToLlvmType();
 };
 
 
@@ -90,6 +93,7 @@ class ArrayType : public Type
     void PrintChildren(int indentLevel);
     void PrintToStream(ostream& out) { out << elemType << "[]"; }
     Type *GetElemType() {return elemType;}
+	int GetElemCount() {return elemCount;}
 };
 
  

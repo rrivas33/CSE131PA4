@@ -17,6 +17,12 @@
 #include "list.h"
 #include "ast_expr.h"
 
+#include "irgen.h"
+#include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/Support/raw_ostream.h"
+
+
+
 class Type;
 class TypeQualifier;
 class NamedType;
@@ -36,6 +42,8 @@ class Decl : public Node
     Identifier *GetIdentifier() const { return id; }
     friend ostream& operator<<(ostream& out, Decl *d) { return out << d->id; }
 
+	virtual llvm::Value* Emit();
+
 };
 
 class VarDecl : public Decl 
@@ -53,6 +61,9 @@ class VarDecl : public Decl
     const char *GetPrintNameForNode() { return "VarDecl"; }
     void PrintChildren(int indentLevel);
     Type *GetType() const { return type; }
+
+	llvm::Type* GetLlvmType() const {return type->typeToLlvmType(); };
+	llvm::Value* Emit();
 };
 
 class VarDeclError : public VarDecl
@@ -80,6 +91,8 @@ class FnDecl : public Decl
 
     Type *GetType() const { return returnType; }
     List<VarDecl*> *GetFormals() {return formals;}
+
+	llvm::Value* Emit();
 };
 
 class FormalsError : public FnDecl

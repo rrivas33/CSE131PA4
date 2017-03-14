@@ -9,6 +9,10 @@
 #include <string.h> // strdup
 #include <stdio.h>  // printf
 
+SymbolTable *Node::symbolTable = new SymbolTable();
+IRGenerator *Node::irgen = new IRGenerator();
+std::vector<llvm::BasicBlock *> Node::bbStack;
+
 Node::Node(yyltype loc) {
     location = new yyltype(loc);
     parent = NULL;
@@ -17,6 +21,11 @@ Node::Node(yyltype loc) {
 Node::Node() {
     location = NULL;
     parent = NULL;
+}
+
+llvm::Value* Node::Emit()
+{
+	 return llvm::UndefValue::get(irgen->GetVoidType());
 }
 
 /* The Print method is used to print the parse tree nodes.

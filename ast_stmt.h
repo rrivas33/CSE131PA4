@@ -32,7 +32,7 @@ class Program : public Node
      Program(List<Decl*> *declList);
      const char *GetPrintNameForNode() { return "Program"; }
      void PrintChildren(int indentLevel);
-     virtual void Emit();
+     virtual llvm::Value* Emit();
 };
 
 class Stmt : public Node
@@ -40,6 +40,8 @@ class Stmt : public Node
   public:
      Stmt() : Node() {}
      Stmt(yyltype loc) : Node(loc) {}
+
+	virtual llvm::Value* Emit() { return llvm::UndefValue::get(irgen->GetVoidType());}
 };
 
 class StmtBlock : public Stmt 
@@ -52,6 +54,8 @@ class StmtBlock : public Stmt
     StmtBlock(List<VarDecl*> *variableDeclarations, List<Stmt*> *statements);
     const char *GetPrintNameForNode() { return "StmtBlock"; }
     void PrintChildren(int indentLevel);
+
+	virtual llvm::Value* Emit();
 };
 
 class DeclStmt: public Stmt 
@@ -63,6 +67,8 @@ class DeclStmt: public Stmt
     DeclStmt(Decl *d);
     const char *GetPrintNameForNode() { return "DeclStmt"; }
     void PrintChildren(int indentLevel);
+
+	llvm::Value* Emit();
 
 };
   
@@ -76,6 +82,7 @@ class ConditionalStmt : public Stmt
     ConditionalStmt() : Stmt(), test(NULL), body(NULL) {}
     ConditionalStmt(Expr *testExpr, Stmt *body);
 
+	virtual llvm::Value* Emit() {return llvm::UndefValue::get(irgen->GetVoidType());}
 };
 
 class LoopStmt : public ConditionalStmt 
@@ -83,6 +90,7 @@ class LoopStmt : public ConditionalStmt
   public:
     LoopStmt(Expr *testExpr, Stmt *body)
             : ConditionalStmt(testExpr, body) {}
+
 };
 
 class ForStmt : public LoopStmt 
@@ -116,6 +124,8 @@ class IfStmt : public ConditionalStmt
     IfStmt(Expr *test, Stmt *thenBody, Stmt *elseBody);
     const char *GetPrintNameForNode() { return "IfStmt"; }
     void PrintChildren(int indentLevel);
+
+	llvm::Value* Emit();
 
 };
 
@@ -152,6 +162,7 @@ class ReturnStmt : public Stmt
     const char *GetPrintNameForNode() { return "ReturnStmt"; }
     void PrintChildren(int indentLevel);
 
+	llvm::Value* Emit();
 };
 
 class SwitchLabel : public Stmt

@@ -40,6 +40,7 @@
 #include <stdlib.h>   // for NULL
 #include "location.h"
 #include <iostream>
+#include "irgen.h"
 
 using namespace std;
 
@@ -51,6 +52,10 @@ class Node  {
   protected:
     yyltype *location;
     Node *parent;
+
+	static SymbolTable *symbolTable;	//keeps tracks of scope tables
+	static IRGenerator *irgen;
+	static std::vector<llvm::BasicBlock *> bbStack;
 
   public:
     Node(yyltype loc);
@@ -68,7 +73,7 @@ class Node  {
     void Print(int indentLevel, const char *label = NULL); 
     virtual void PrintChildren(int indentLevel)  {}
 
-    virtual void Emit() {}
+    virtual llvm::Value* Emit();
 };
    
 

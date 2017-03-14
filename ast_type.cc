@@ -79,6 +79,41 @@ bool Type::IsMatrix() {
 bool Type::IsError() { 
     return this->IsEquivalentTo(Type::errorType);
 }
+
+llvm::Type* Type::typeToLlvmType()
+{
+	llvm::Type *llvmType;
+	if(this->IsEquivalentTo(Type::intType))
+	{
+		llvmType = irgen->GetIntType();
+	}		
+	else if(this->IsEquivalentTo(Type::floatType))
+	{	
+		llvmType = irgen->GetFloatType();
+	}		
+	else if(this->IsEquivalentTo(Type::boolType))
+	{
+		llvmType = irgen->GetBoolType();
+	}
+	else if(this->IsEquivalentTo(Type::voidType))
+	{
+		llvmType = irgen->GetVoidType();	
+	}		
+	else if(this->IsEquivalentTo(Type::vec2Type))
+	{
+		llvmType = irgen->GetVec2Type();
+	}		
+	else if(this->IsEquivalentTo(Type::vec3Type))
+	{
+		llvmType = irgen->GetVec3Type();
+	}
+	else if(this->IsEquivalentTo(Type::vec4Type))
+	{		
+		llvmType = irgen->GetVec4Type();
+	}
+
+	return llvmType;
+}
 	
 NamedType::NamedType(Identifier *i) : Type(*i->GetLocation()) {
     Assert(i != NULL);
@@ -97,5 +132,6 @@ ArrayType::ArrayType(yyltype loc, Type *et, int ec) : Type(loc) {
 void ArrayType::PrintChildren(int indentLevel) {
     elemType->Print(indentLevel+1);
 }
+
 
 
