@@ -56,7 +56,6 @@ void VarExpr::PrintChildren(int indentLevel) {
 
 llvm::Value* VarExpr::Emit()
 {
-	std::cerr << "VarExpr" << std::endl;
 	Symbol *sym = symbolTable->find(id->GetName());
 	
 	llvm::Type *type = sym->value->getType();
@@ -659,12 +658,65 @@ void FieldAccess::PrintChildren(int indentLevel) {
     field->Print(indentLevel+1);
 }
 
+llvm::Value* FieldAccess::Emit()
+{
+	//TODO How to get type of global variable
+
+
+	llvm::AllocaInst *value = llvm::dyn_cast<llvm::AllocaInst>(base->Emit());
+	//llvm::Value *value = base->Emit();
+	//llvm::GlobalValue *value = llvm::dyn_cast<llvm::GlobalValue>(base->Emit());
+	
+	
+	llvm::VectorType *vector = llvm::dyn_cast<llvm::VectorType>(value->getAllocatedType());
+	
+
+
+
+	//vec2
+	unsigned int num = 0;
+	num = vector->getNumElements();
+	std::cerr << "num: " << num << std::endl;
+	if(vector->getNumElements() == 2)
+		std::cerr << "vec2" << std::endl;
+	else if(vector->getNumElements() == 3)
+		std::cerr << "vec3" << std::endl;
+	else if(vector->getNumElements() == 4)
+		std::cerr << "vec4" << std::endl;
+
+	
+}
+
 Call::Call(yyltype loc, Expr *b, Identifier *f, List<Expr*> *a) : Expr(loc)  {
     Assert(f != NULL && a != NULL); // b can be be NULL (just means no explicit base)
     base = b;
     if (base) base->SetParent(this);
     (field=f)->SetParent(this);
     (actuals=a)->SetParentAll(this);
+}
+
+llvm::Value* Call::Emit()
+{
+	//get function to call
+	llvm::Module *module = irgen->GetOrCreateModule("Module");
+	llvm::Function *func = module->getFunction(field->GetName());
+
+	//Store parameters in vector
+	std::vector<llvm::Value *> vecArgs;
+	for(int i = 0; i < actuals->NumElements(); i++)
+	{
+		llvm::Value *value = actuals->Nth(i)->Emit();
+		if(llvm::UnaryInstruction::classof(value) || llvm::GlobalVariable::classof(value) || llvm::GetElementPtrInst::classof(value))
+			value = new llvm::LoadInst(value, "ld1", irgen->GetBasicBlock());
+
+		vecArgs.push_back(value);
+	}
+	llvm::ArrayRef<llvm::Value*> argsArray(vecArgs);
+
+	//create call
+	llvm::CallInst *call = llvm::CallInst::Create(func, argsArray, field->GetName(), irgen->GetBasicBlock());
+
+	return call;
 }
 
 void Call::PrintChildren(int indentLevel) {

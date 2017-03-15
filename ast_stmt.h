@@ -91,6 +91,8 @@ class LoopStmt : public ConditionalStmt
     LoopStmt(Expr *testExpr, Stmt *body)
             : ConditionalStmt(testExpr, body) {}
 
+	virtual llvm::Value* Emit() {return llvm::UndefValue::get(irgen->GetVoidType());}
+
 };
 
 class ForStmt : public LoopStmt 
@@ -102,6 +104,8 @@ class ForStmt : public LoopStmt
     ForStmt(Expr *init, Expr *test, Expr *step, Stmt *body);
     const char *GetPrintNameForNode() { return "ForStmt"; }
     void PrintChildren(int indentLevel);
+
+	llvm::Value* Emit();
 
 };
 
@@ -141,6 +145,8 @@ class BreakStmt : public Stmt
   public:
     BreakStmt(yyltype loc) : Stmt(loc) {}
     const char *GetPrintNameForNode() { return "BreakStmt"; }
+
+	llvm::Value* Emit();
 
 };
 

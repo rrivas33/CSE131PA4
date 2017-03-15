@@ -48,6 +48,8 @@ void VarDecl::PrintChildren(int indentLevel) {
 //EMIT
 llvm::Value* VarDecl::Emit()
 {
+	std::cerr << "VarDecl\n";
+
 	//current function we are in, if any
 	llvm::Function *func = irgen->GetFunction();
 	llvm::Module *mod = irgen->GetOrCreateModule("Module");
@@ -83,6 +85,7 @@ llvm::Value* VarDecl::Emit()
 	else if(type->IsEquivalentTo(Type::vec4Type))
 	{		
 		llvmType = irgen->GetVec4Type();
+		std::cerr << llvm::cast<llvm::VectorType>(llvmType)->getNumElements() << std::endl;
 	}
 
 

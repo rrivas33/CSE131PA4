@@ -10,7 +10,8 @@
 
 #include "irgen.h"
 #include "llvm/Bitcode/ReaderWriter.h"
-#include "llvm/Support/raw_ostream.h"                                                   
+#include "llvm/Support/raw_ostream.h"
+
 
 
 Program::Program(List<Decl*> *d) {
@@ -129,10 +130,6 @@ ConditionalStmt::ConditionalStmt(Expr *t, Stmt *b) {
     (body=b)->SetParent(this);
 }
 
-llvm::Value* ConditionalStmt()
-{
-	
-}
 
 ForStmt::ForStmt(Expr *i, Expr *t, Expr *s, Stmt *b): LoopStmt(t, b) { 
     Assert(i != NULL && t != NULL && b != NULL);
@@ -148,6 +145,57 @@ void ForStmt::PrintChildren(int indentLevel) {
     if ( step )
       step->Print(indentLevel+1, "(step) ");
     body->Print(indentLevel+1, "(body) ");
+}
+
+llvm::Value* ForStmt::Emit()
+{
+
+	//footer
+	llvm::BasicBlock *footerBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "footerBB", irgen->GetFunction(), !bbStack.empty() ? bbStack.back() : NULL);
+
+	//step
+	llvm::BasicBlock *stepBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "stepBB", irgen->GetFunction(), footerBB);
+	bbStack.push_back(stepBB);
+
+	//body
+	llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "bodyBB", irgen->GetFunction(), stepBB);
+		
+	//header
+	llvm::BasicBlock *headerBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "headerBB", irgen->GetFunction(), bodyBB);
+
+
+	//branch to loop
+	init->Emit();
+	llvm::BranchInst::Create(headerBB,irgen->GetBasicBlock());
+
+	//populate headerBB
+	irgen->SetBasicBlock(headerBB);
+	llvm::Value *cond = test->Emit();
+	llvm::BranchInst::Create(bodyBB, footerBB, cond, irgen->GetBasicBlock());
+
+
+	//populate bodyBB
+	irgen->SetBasicBlock(bodyBB);
+	this->body->Emit();
+
+	//no return stmt in body
+	if(!retStmtIncluded)
+		llvm::BranchInst::Create(stepBB, irgen->GetBasicBlock());
+	else
+		retStmtIncluded = false;
+
+
+	//populate stepBB
+	irgen->SetBasicBlock(bbStack.back());
+	bbStack.pop_back();
+	step->Emit();
+	llvm::BranchInst::Create(headerBB, irgen->GetBasicBlock());
+	
+	//end of loop
+	irgen->SetBasicBlock(footerBB);
+
+
+	return llvm::UndefValue::get(irgen->GetVoidType());
 }
 
 void WhileStmt::PrintChildren(int indentLevel) {
@@ -169,24 +217,90 @@ void IfStmt::PrintChildren(int indentLevel) {
 
 llvm::Value* IfStmt::Emit()
 {
-	llvm::BasicBlock *footerBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "footerBB", irgen->GetFunction());
+	llvm::Value *testCond = test->Emit();
+	llvm::BasicBlock *initBB = irgen->GetBasicBlock();;
+
+	//TODO need to insert footer bb after initBB. Use the stack of bb?
+	//push footer bb
+	llvm::BasicBlock *footerBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "footerBB", irgen->GetFunction(), !bbStack.empty() ? bbStack.back() : NULL);
 	bbStack.push_back(footerBB);
-	
+
 	//push else body bb
+	llvm::BasicBlock *elseBB = NULL;
 	if(elseBody != NULL)
 	{	
-		llvm::BasicBlock *elseBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "ElseBB", irgen->GetFunction());
-		bbStack.push_back(elseBB);	
+		elseBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "ElseBB", irgen->GetFunction(), footerBB);
+		bbStack.push_back(elseBB);
+	
+		/*
+		irgen->SetBasicBlock(elseBB);
+		elseBody->Emit();
+		
+		
+		if(!retStmtIncluded)
+			llvm::BranchInst::Create(footerBB, elseBB);
+		retStmtIncluded = false;
+		*/
+	}
+
+	//then bb
+	llvm::BasicBlock *thenBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "thenBB", irgen->GetFunction(), elseBB ? elseBB : footerBB);
+	
+	/*	
+	irgen->SetBasicBlock(thenBB);
+	body->Emit();
+	
+	//branch only when no return stmt in body
+	if(!retStmtIncluded)
+		llvm::BranchInst::Create(footerBB, thenBB);
+	retStmtIncluded = false;
+	*/
+
+	//branch if
+	if(elseBody != NULL)
+		llvm::BranchInst::Create(thenBB, elseBB, testCond, initBB);
+	else
+		llvm::BranchInst::Create(thenBB, footerBB, testCond, initBB);
+
+	//populate thenBB
+	irgen->SetBasicBlock(thenBB);
+	body->Emit();
+
+
+	//branch only when no return stmt in body
+	if(!retStmtIncluded)
+		llvm::BranchInst::Create(footerBB, thenBB);
+	retStmtIncluded = false;
+
+
+	//populate else bb
+	if(elseBody != NULL)
+	{
+		irgen->SetBasicBlock(bbStack.back());
+		bbStack.pop_back();
+		elseBody->Emit();
+		
+		if(!retStmtIncluded)
+			llvm::BranchInst::Create(footerBB, elseBB);
+
+		retStmtIncluded = false;
+		
 	}
 	
-	//then basic block
-	llvm::BasicBlock *thenBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "thenBB", irgen->GetFunction());
-	
+
+	//set footerBB
+	irgen->SetBasicBlock(bbStack.back());
+	bbStack.pop_back();
 
 	return llvm::UndefValue::get(irgen->GetVoidType());
 
 }
 
+llvm::Value* BreakStmt::Emit()
+{
+	//TODO
+	return llvm::UndefValue::get(irgen->GetVoidType());
+}
 
 ReturnStmt::ReturnStmt(yyltype loc, Expr *e) : Stmt(loc) { 
     expr = e;
@@ -200,6 +314,8 @@ void ReturnStmt::PrintChildren(int indentLevel) {
 
 llvm::Value* ReturnStmt::Emit()
 {
+	retStmtIncluded = true;
+
 	if(expr != NULL)
 	{
 		llvm::Value *value = expr->Emit();

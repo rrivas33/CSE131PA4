@@ -12,6 +12,7 @@
 SymbolTable *Node::symbolTable = new SymbolTable();
 IRGenerator *Node::irgen = new IRGenerator();
 std::vector<llvm::BasicBlock *> Node::bbStack;
+bool Node::retStmtIncluded = false;
 
 Node::Node(yyltype loc) {
     location = new yyltype(loc);
