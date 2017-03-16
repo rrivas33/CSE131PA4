@@ -39,13 +39,15 @@ struct Symbol {
   EntryKind kind;
   int someInfo;
   llvm::Value *value;
+  llvm::Type *llvmType;
 
-  Symbol() : name(NULL), decl(NULL), kind(E_VarDecl), value(NULL) {}
-  Symbol(char *n, Decl *d, EntryKind k, llvm::Value *v = NULL) :
+  Symbol() : name(NULL), decl(NULL), kind(E_VarDecl), value(NULL), llvmType(NULL) {}
+  Symbol(char *n, Decl *d, EntryKind k, llvm::Value *v = NULL, llvm::Type *t = NULL) :
         name(n),
         decl(d),
         kind(k),
-        value(v) {}
+        value(v),
+		llvmType(t) {}
 };
 
 struct lessStr {

@@ -16,9 +16,9 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Constants.h"
+
 //#include "ast_type.h"
 
-class Type;
 
 class IRGenerator {
   public:
@@ -43,6 +43,8 @@ class IRGenerator {
 	llvm::Type *GetVec3Type() const;
 	llvm::Type *GetVec4Type() const;
 	//llvm::Type *GetType(Type *type);
+
+	//static llvm::Type* GetLlvmType(llvm::Value *value);
 
   private:
     llvm::LLVMContext *context;

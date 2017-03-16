@@ -56,6 +56,9 @@ void VarExpr::PrintChildren(int indentLevel) {
 
 llvm::Value* VarExpr::Emit()
 {
+
+	//TODO figure out how to get type allocated in variable
+	//allocated type for AllocInst?
 	Symbol *sym = symbolTable->find(id->GetName());
 	
 	llvm::Type *type = sym->value->getType();
@@ -289,7 +292,7 @@ llvm::Value* ArithmeticExpr::Emit()
 
 llvm::Value* RelationalExpr::Emit()
 {
-	//TODO checking of type not working?
+	//TODO checking of type not working!!!!
 
 	llvm::Value *val1 = left->Emit();
 	llvm::Value *val2 = right->Emit();
@@ -311,24 +314,37 @@ llvm::Value* RelationalExpr::Emit()
 	//generate compare instruction
 	if(op->IsOp("<"))
 	{
-		cmp = llvm::CmpInst::Create(type->isFloatTy() ? llvm::CmpInst::FCmp : llvm::CmpInst::ICmp, llvm::CmpInst::FCMP_OLT, val1, val2, "cmp");
+		if(type->isFloatTy())
+			cmp = new llvm::FCmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::FCMP_OLT, val1, val2, "fcmp");
+		else
+			cmp = new llvm::ICmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::ICMP_ULT, val1, val2, "icmp");
 	}
 	else if(op->IsOp(">"))
 	{
-		cmp = llvm::CmpInst::Create(type->isFloatTy() ? llvm::CmpInst::FCmp : llvm::CmpInst::ICmp, llvm::CmpInst::FCMP_OGT, val1, val2, "cmp");
+		
+		if(type->isFloatTy())
+			cmp = new llvm::FCmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::FCMP_OGT, val1, val2, "fcmp");
+		else
+			cmp = new llvm::ICmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::ICMP_UGT, val1, val2, "icmp");
 		
 	}
 	else if(op->IsOp("<="))
 	{
-		cmp = llvm::CmpInst::Create(type->isFloatTy() ? llvm::CmpInst::FCmp : llvm::CmpInst::ICmp, llvm::CmpInst::FCMP_OLE, val1, val2, "cmp");		
+		if(type->isFloatTy())
+			cmp = new llvm::FCmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::FCMP_OLE, val1, val2, "fcmp");
+		else
+			cmp = new llvm::ICmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::ICMP_ULE, val1, val2, "icmp");	
 	}
 	else if(op->IsOp(">="))
 	{
-		cmp = llvm::CmpInst::Create(type->isFloatTy() ? llvm::CmpInst::FCmp : llvm::CmpInst::ICmp, llvm::CmpInst::FCMP_OGE, val1, val2, "cmp");
+		if(type->isFloatTy())
+			cmp = new llvm::FCmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::FCMP_OGE, val1, val2, "fcmp");
+		else
+			cmp = new llvm::ICmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::ICMP_UGE, val1, val2, "icmp");
 	}
 
 	//add inst to current basic block
-	bb->getInstList().push_back(cmp);
+	//bb->getInstList().push_back(cmp);
 	return cmp;
 }
 
@@ -355,14 +371,19 @@ llvm::Value* EqualityExpr::Emit()
 	llvm::CmpInst *cmp;
 	if(op->IsOp("=="))
 	{
-		cmp = llvm::CmpInst::Create(type->isFloatTy() ? llvm::CmpInst::FCmp : llvm::CmpInst::ICmp, llvm::CmpInst::FCMP_OEQ, val1, val2, "cmp");
+		if(type->isFloatTy())
+			cmp = new llvm::FCmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::FCMP_OEQ, val1, val2, "fcmp");
+		else
+			cmp = new llvm::ICmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::ICMP_EQ, val1, val2, "icmp");
 	}
 	else if(op->IsOp("!="))
 	{
-		cmp = llvm::CmpInst::Create(type->isFloatTy() ? llvm::CmpInst::FCmp : llvm::CmpInst::ICmp, llvm::CmpInst::FCMP_ONE, val1, val2, "cmp");
+		if(type->isFloatTy())
+			cmp = new llvm::FCmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::FCMP_ONE, val1, val2, "fcmp");
+		else
+			cmp = new llvm::ICmpInst(*(irgen->GetBasicBlock()), llvm::CmpInst::ICMP_NE, val1, val2, "icmp");
 	}
 
-	irgen->GetBasicBlock()->getInstList().push_back(cmp);
 	return cmp;
 }
 
@@ -516,14 +537,7 @@ llvm::Value* AssignExpr::Emit()
 
 llvm::Value* PostfixExpr::Emit()
 {
-	//TODO
 	//get llvm value of expr
-	if(right == NULL)
-		std::cerr << "right was null" << std::endl;
-	else if(left == NULL)
-		std::cerr << "left was null" << std::endl;
-
-	std::cerr << "in postfix" << std::endl;
 	llvm::Value *varRight = left->Emit();
 	llvm::Value *valueRight = varRight;
 
@@ -537,6 +551,8 @@ llvm::Value* PostfixExpr::Emit()
 	llvm::Constant *valLeft;
 	llvm::BinaryOperator *binInst;
 		
+
+	//TODO checking of type not working!
 	if(op->IsOp("++"))
 	{
 		//integer
@@ -660,7 +676,7 @@ void FieldAccess::PrintChildren(int indentLevel) {
 
 llvm::Value* FieldAccess::Emit()
 {
-	//TODO How to get type of global variable
+	//TODO How to get type of global variable. Finish implementation
 
 
 	llvm::AllocaInst *value = llvm::dyn_cast<llvm::AllocaInst>(base->Emit());

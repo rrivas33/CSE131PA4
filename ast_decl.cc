@@ -99,7 +99,7 @@ llvm::Value* VarDecl::Emit()
 		llvm::GlobalVariable *globalVar = llvm::cast<llvm::GlobalVariable>(mod->getOrInsertGlobal(id->GetName(), llvmType));
 		globalVar->setConstant(false);
 
-		Symbol sym(id->GetName(), this, E_VarDecl, globalVar);
+		Symbol sym(id->GetName(), this, E_VarDecl, globalVar, llvmType);
 		symbolTable->insert(sym);
 
 		return globalVar;
@@ -112,7 +112,7 @@ llvm::Value* VarDecl::Emit()
 
 		llvm::AllocaInst *var = new llvm::AllocaInst(llvmType, id->GetName(),  firstBB);
 
-		Symbol sym(id->GetName(), this, E_VarDecl, var);
+		Symbol sym(id->GetName(), this, E_VarDecl, var, llvmType);
 		symbolTable->insert(sym);
 
 		return var;

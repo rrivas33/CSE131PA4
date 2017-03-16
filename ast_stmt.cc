@@ -7,6 +7,7 @@
 #include "ast_decl.h"
 #include "ast_expr.h"
 #include "symtable.h"
+#include <string>
 
 #include "irgen.h"
 #include "llvm/Bitcode/ReaderWriter.h"
@@ -203,6 +204,44 @@ void WhileStmt::PrintChildren(int indentLevel) {
     body->Print(indentLevel+1, "(body) ");
 }
 
+llvm::Value* WhileStmt::Emit()
+{
+	//footer bb
+	llvm::BasicBlock *footerBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "footerBB", irgen->GetFunction(), !bbStack.empty() ? bbStack.back() : NULL);
+	bbStack.push_back(footerBB);
+
+	//body bb
+	llvm::BasicBlock *bodyBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "bodyBB", irgen->GetFunction(), footerBB);
+
+	//test bb
+	llvm::BasicBlock *testBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "testBB", irgen->GetFunction(), bodyBB);
+
+	//branch to while testBB
+	llvm::BranchInst::Create(testBB, irgen->GetBasicBlock());
+
+	//Emit test
+	irgen->SetBasicBlock(testBB);
+	llvm::Value *cond = test->Emit();
+	llvm::BranchInst::Create(bodyBB, footerBB, cond, irgen->GetBasicBlock());
+
+	//Emit body
+	irgen->SetBasicBlock(bodyBB);
+	body->Emit();
+
+	//no return stmt in body
+	if(!retStmtIncluded)
+		llvm::BranchInst::Create(testBB, irgen->GetBasicBlock());
+	else
+		retStmtIncluded = false;
+
+	//set footer bb
+	irgen->SetBasicBlock(bbStack.back());
+	bbStack.pop_back();
+
+	return llvm::UndefValue::get(irgen->GetVoidType());
+	
+}
+
 IfStmt::IfStmt(Expr *t, Stmt *tb, Stmt *eb): ConditionalStmt(t, tb) { 
     Assert(t != NULL && tb != NULL); // else can be NULL
     elseBody = eb;
@@ -298,8 +337,8 @@ llvm::Value* IfStmt::Emit()
 
 llvm::Value* BreakStmt::Emit()
 {
-	//TODO
-	return llvm::UndefValue::get(irgen->GetVoidType());
+	
+	return llvm::BranchInst::Create(bbStack.back(), irgen->GetBasicBlock());
 }
 
 ReturnStmt::ReturnStmt(yyltype loc, Expr *e) : Stmt(loc) { 
@@ -348,6 +387,18 @@ void SwitchLabel::PrintChildren(int indentLevel) {
     if (stmt)  stmt->Print(indentLevel+1);
 }
 
+llvm::Value* Case::Emit()
+{
+	stmt->Emit();
+
+	return label->Emit();
+}
+
+llvm::Value* Default::Emit()
+{
+	return stmt->Emit();
+}
+
 SwitchStmt::SwitchStmt(Expr *e, List<Stmt *> *c, Default *d) {
     Assert(e != NULL && c != NULL && c->NumElements() != 0 );
     (expr=e)->SetParent(this);
@@ -360,5 +411,84 @@ void SwitchStmt::PrintChildren(int indentLevel) {
     if (expr) expr->Print(indentLevel+1);
     if (cases) cases->PrintAll(indentLevel+1);
     if (def) def->Print(indentLevel+1);
+}
+
+llvm::Value* SwitchStmt::Emit()
+{
+	llvm::BasicBlock *initBB = irgen->GetBasicBlock();
+	std::vector<llvm::BasicBlock*> bbs;
+
+	//switch exit bb
+	llvm::BasicBlock *exitBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "switchExit", irgen->GetFunction(), !bbStack.empty() ? bbStack.back() : NULL);
+	bbStack.push_back(exitBB);
+	
+
+	//default case
+	llvm::BasicBlock *defaultBB = NULL;
+	
+	//create bb for each case
+	for(int i = 0; i < cases->NumElements(); i++)
+	{
+		if(dynamic_cast<Default*>(cases->Nth(i)))
+		{
+			defaultBB = llvm::BasicBlock::Create(*(irgen->GetContext()), "switchDef", irgen->GetFunction(), exitBB);
+			bbs.push_back(defaultBB);		
+		}
+		else
+		{
+			llvm::BasicBlock *bb = llvm::BasicBlock::Create(*(irgen->GetContext()), "switchCase", irgen->GetFunction(), exitBB);
+			bbs.push_back(bb);
+		}
+	}
+
+	//exitBB at bottom of case statck in absence of default case
+	if(defaultBB == NULL)
+		bbs.push_back(exitBB);
+
+	//emit expr
+	llvm::Value *switchValue = expr->Emit();
+	
+	//load swithValue if necessary
+	if(llvm::UnaryInstruction::classof(switchValue) || llvm::GlobalVariable::classof(switchValue) || llvm::GetElementPtrInst::classof(switchValue))
+			switchValue = new llvm::LoadInst(switchValue, "ld1", irgen->GetBasicBlock());
+
+	//create swtich inst
+	llvm::SwitchInst *switchInst = llvm::SwitchInst::Create(switchValue, defaultBB ? defaultBB : exitBB, bbs.size(), irgen->GetBasicBlock());
+
+	//emit case stmts
+	int i;
+	for(i = 0; i < bbs.size()-1; i++)
+	{
+		irgen->SetBasicBlock(bbs[i]);
+		llvm::ConstantInt *label = llvm::cast<llvm::ConstantInt>(cases->Nth(i)->Emit());
+
+		//no terminator in bb
+		if(!irgen->GetBasicBlock()->getTerminator())
+		{
+			llvm::BranchInst::Create(bbs[i+1], irgen->GetBasicBlock());
+		}
+
+		//add case to switch
+		switchInst->addCase(label, bbs[i]); 
+	}
+
+	//emit default case
+	if(defaultBB != NULL)
+	{
+		irgen->SetBasicBlock(defaultBB);
+		cases->Nth(i)->Emit();
+
+		if(!irgen->GetBasicBlock()->getTerminator())
+			llvm::BranchInst::Create(exitBB, irgen->GetBasicBlock());
+	}
+
+
+	irgen->SetBasicBlock(bbStack.back());
+	bbStack.pop_back();
+	
+	
+		
+
+	return llvm::UndefValue::get(irgen->GetVoidType());
 }
 
