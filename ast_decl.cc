@@ -205,13 +205,16 @@ llvm::Value* FnDecl::Emit()
 		//TODO Not sure about storing the argument into the allocation
 		llvm::StoreInst *store = new llvm::StoreInst(arg, inst, nextBB);
 	}
-	
-	
 
+	
 	body->Emit();
 	
 	//branch entry bb to next bb
 	llvm::BranchInst *branch = llvm::BranchInst::Create(nextBB, entryBB);
+
+
+	if(irgen->GetBasicBlock()->getTerminator() == NULL)
+		new llvm::UnreachableInst(*(irgen->GetContext()), irgen->GetBasicBlock());
 
 	symbolTable->pop();
 	
