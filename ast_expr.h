@@ -235,6 +235,8 @@ class FieldAccess : public LValue
     FieldAccess(Expr *base, Identifier *field); //ok to pass NULL base
     const char *GetPrintNameForNode() { return "FieldAccess"; }
     void PrintChildren(int indentLevel);
+	char* GetBase() { return dynamic_cast<VarExpr *>(base)->GetIdentifier()->GetName();}
+	char* GetField(){ return field->GetName(); }
 
 	llvm::Value* Emit();
 };

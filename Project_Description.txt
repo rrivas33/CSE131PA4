@@ -1,0 +1,19 @@
+My strategy for this project, was to first get familiar with the API.
+I then started by planning on how the flow of the program would go.
+I decided that Emit() would return the value of the operation generated,
+that way the caller could potentially use the results of that instruction.
+
+I started by implementing Emit() for the declarations. I then move 
+on to generating code for the statements and finally I generated 
+code for all the expressions possible that could be parsed.
+
+This program takes a .glsl source file that contains a program compiles it
+and creates a new file .bc.
+
+
+To use compile the source file:
+	./glc < foo.glsl > foo.bc
+
+
+To execute the program:
+	./gli foo.bc

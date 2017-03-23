@@ -29,7 +29,7 @@ Symbol* ScopedTable::find(const char *name)
 
 
 
-SymbolTable::SymbolTable()
+SymbolTable::SymbolTable(IRGenerator *ir)
 {
 	//Create global scope table and added to symbol table
 	ScopedTable *globalScope = new ScopedTable();
@@ -39,6 +39,8 @@ SymbolTable::SymbolTable()
 	currentScopedTable = globalScope;
 
 	currentFuncDecl = NULL;
+
+	irGen = ir;
 }
 
 //Push or Pop ScopedTable from vector
@@ -85,7 +87,7 @@ Symbol* SymbolTable::find(const char *name)
 			return symbol;
 		
 	}
-
+	std::cerr << "could not find symbol = " << name << endl;
 	return NULL;
 }
 
@@ -112,6 +114,49 @@ void MyStack::push(Stmt *s)
 		loops++;
 	else if(switchStmt != NULL)
 		switches++;
+}
+
+llvm::Type* SymbolTable::GetType(llvm::Value *value)
+{
+	if(llvm::dyn_cast<llvm::AllocaInst>(value) || llvm::dyn_cast<llvm::GlobalVariable>(value))
+	{
+		//std::cerr << "symbol allocation\n";
+		return find(value->getName().str().c_str())->llvmType;
+	}
+	else if(llvm::dyn_cast<llvm::ConstantInt>(value))
+	{
+		//std::cerr << "symbol ConstantInt\n";
+		return irGen->GetIntType();
+	}
+	else if(llvm::dyn_cast<llvm::ConstantFP>(value))
+	{
+		//std::cerr << "symbol ConstantFP\n";
+		return irGen->GetFloatType();
+	}
+	else if(llvm::dyn_cast<llvm::GetElementPtrInst>(value))
+	{
+		//std::cerr << "GetElemrntPtr in symbomTable\n";
+		llvm::GetElementPtrInst *elmt = llvm::dyn_cast<llvm::GetElementPtrInst>(value);
+		return elmt->getType()->getElementType();
+	}
+	else if(llvm::dyn_cast<llvm::ExtractElementInst>(value))
+	{
+		//cerr << "ExtractElement in table\n";
+		return irGen->GetFloatType();
+	}
+	else if(llvm::dyn_cast<llvm::ShuffleVectorInst>(value))
+	{
+		llvm::ShuffleVectorInst *shuffle = llvm::dyn_cast<llvm::ShuffleVectorInst>(value);
+		return shuffle->getType();
+	}
+	else
+	{
+		
+		//cerr << "returned type null\n";
+		return value->getType();
+		//return NULL;
+	}
+
 }
 
 void MyStack::pop()

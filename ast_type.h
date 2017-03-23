@@ -17,6 +17,7 @@
 #include <iostream>
 #include "irgen.h"
 
+
 using namespace std;
 
 class TypeQualifier : public Node
@@ -64,6 +65,8 @@ class Type : public Node
     bool IsError();
 
 	llvm::Type* typeToLlvmType();
+
+	
 };
 
 

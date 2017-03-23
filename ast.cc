@@ -9,10 +9,14 @@
 #include <string.h> // strdup
 #include <stdio.h>  // printf
 
-SymbolTable *Node::symbolTable = new SymbolTable();
+
 IRGenerator *Node::irgen = new IRGenerator();
+SymbolTable *Node::symbolTable = new SymbolTable(irgen);
 std::vector<llvm::BasicBlock *> Node::bbStack;
+std::vector<llvm::BasicBlock *> Node::bbLoopExitStack;
+std::vector<llvm::BasicBlock *> Node::bbContinueStack;
 bool Node::retStmtIncluded = false;
+bool Node::inLoop = false;
 
 Node::Node(yyltype loc) {
     location = new yyltype(loc);

@@ -17,8 +17,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Constants.h"
 
-//#include "ast_type.h"
-
 
 class IRGenerator {
   public:
@@ -35,14 +33,15 @@ class IRGenerator {
     llvm::BasicBlock *GetBasicBlock() const;
     void        SetBasicBlock(llvm::BasicBlock *bb);
 
-    llvm::Type *GetIntType() const;
-    llvm::Type *GetBoolType() const;
-    llvm::Type *GetFloatType() const;
-	llvm::Type *GetVoidType() const;
-	llvm::Type *GetVec2Type() const;
-	llvm::Type *GetVec3Type() const;
-	llvm::Type *GetVec4Type() const;
-	//llvm::Type *GetType(Type *type);
+    llvm::Type *GetIntType();
+    llvm::Type *GetBoolType();
+    llvm::Type *GetFloatType();
+	llvm::Type *GetVoidType();
+	llvm::Type *GetVec2Type();
+	llvm::Type *GetVec3Type();
+	llvm::Type *GetVec4Type();
+	llvm::Type *GetType(llvm::Value *value);
+	bool IsFloatType(llvm::Value *value);
 
 	//static llvm::Type* GetLlvmType(llvm::Value *value);
 

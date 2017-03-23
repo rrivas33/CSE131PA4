@@ -114,6 +114,7 @@ llvm::Type* Type::typeToLlvmType()
 
 	return llvmType;
 }
+
 	
 NamedType::NamedType(Identifier *i) : Type(*i->GetLocation()) {
     Assert(i != NULL);

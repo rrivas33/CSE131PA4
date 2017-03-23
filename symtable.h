@@ -18,6 +18,7 @@
 #include <iostream>
 #include <string.h>
 #include "errors.h"
+#include "irgen.h"
 
 namespace llvm {
 	class Value;
@@ -73,9 +74,10 @@ class SymbolTable {
   std::vector<ScopedTable *> tables;
   ScopedTable *currentScopedTable;
   FnDecl *currentFuncDecl;
+  IRGenerator *irGen;
 
   public:
-    SymbolTable();
+    SymbolTable(IRGenerator *ir);
     ~SymbolTable();
 
 	//Push or Pop ScopedTable from vector
@@ -95,6 +97,8 @@ class SymbolTable {
 	Type* getCurrentFuncType();
 
 	bool isGlobalScope() const { return (tables.size() == 1); }
+
+	llvm::Type* GetType(llvm::Value *value);
 
 };    
 

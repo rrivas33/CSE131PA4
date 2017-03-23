@@ -56,7 +56,10 @@ class Node  {
 	static SymbolTable *symbolTable;	//keeps tracks of scope tables
 	static IRGenerator *irgen;
 	static std::vector<llvm::BasicBlock *> bbStack;
+	static std::vector<llvm::BasicBlock *> bbLoopExitStack;
+	static std::vector<llvm::BasicBlock *> bbContinueStack;
 	static bool retStmtIncluded;
+	static bool inLoop;
 
   public:
     Node(yyltype loc);

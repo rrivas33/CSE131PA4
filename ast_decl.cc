@@ -48,18 +48,19 @@ void VarDecl::PrintChildren(int indentLevel) {
 //EMIT
 llvm::Value* VarDecl::Emit()
 {
-	std::cerr << "VarDecl\n";
+
 
 	//current function we are in, if any
 	llvm::Function *func = irgen->GetFunction();
 	llvm::Module *mod = irgen->GetOrCreateModule("Module");
 	llvm::Type *llvmType;
+	llvm::Type *elmtType = NULL;
 
 	ArrayType *arrayType = dynamic_cast<ArrayType *>(type);
 	if(arrayType != NULL)
 	{
 		//llvm array type
-		llvm::Type *elmtType = arrayType->GetElemType()->typeToLlvmType();
+		elmtType = arrayType->GetElemType()->typeToLlvmType();
 		llvmType =  llvm::ArrayType::get(elmtType, arrayType->GetElemCount());
 	}
 	else if(type->IsEquivalentTo(Type::intType))
@@ -85,7 +86,6 @@ llvm::Value* VarDecl::Emit()
 	else if(type->IsEquivalentTo(Type::vec4Type))
 	{		
 		llvmType = irgen->GetVec4Type();
-		std::cerr << llvm::cast<llvm::VectorType>(llvmType)->getNumElements() << std::endl;
 	}
 
 
@@ -99,7 +99,7 @@ llvm::Value* VarDecl::Emit()
 		llvm::GlobalVariable *globalVar = llvm::cast<llvm::GlobalVariable>(mod->getOrInsertGlobal(id->GetName(), llvmType));
 		globalVar->setConstant(false);
 
-		Symbol sym(id->GetName(), this, E_VarDecl, globalVar, llvmType);
+		Symbol sym(id->GetName(), this, E_VarDecl, globalVar, elmtType ? elmtType : llvmType);
 		symbolTable->insert(sym);
 
 		return globalVar;
@@ -112,7 +112,7 @@ llvm::Value* VarDecl::Emit()
 
 		llvm::AllocaInst *var = new llvm::AllocaInst(llvmType, id->GetName(),  firstBB);
 
-		Symbol sym(id->GetName(), this, E_VarDecl, var, llvmType);
+		Symbol sym(id->GetName(), this, E_VarDecl, var, elmtType ? elmtType : llvmType);
 		symbolTable->insert(sym);
 
 		return var;
@@ -149,10 +149,12 @@ void FnDecl::PrintChildren(int indentLevel) {
 
 llvm::Value* FnDecl::Emit()
 {
-
+	symbolTable->push();
+	
 	//create llvm function signature
 	llvm::Type *llvmRetType = returnType->typeToLlvmType();
 
+	//arguments type
 	std::vector<llvm::Type *> argTypes;	
 	for(int i = 0; i < formals->NumElements(); i++)
 	{
@@ -160,6 +162,7 @@ llvm::Value* FnDecl::Emit()
 		argTypes.push_back(decl->GetLlvmType());
 	}
 
+	//func type
 	llvm::ArrayRef<llvm::Type *> argArray(argTypes);
 	llvm::FunctionType *funcType = llvm::FunctionType::get(llvmRetType, argArray, false);
 
@@ -174,7 +177,7 @@ llvm::Value* FnDecl::Emit()
 	for(int i = 0; i < formals->NumElements(); i++, arg++)
 	{
 		Decl *decl = formals->Nth(i);
-		arg->setName(decl->GetIdentifier()->GetName());
+		arg->setName("_param" + i);
 	}
 
 	
@@ -210,31 +213,8 @@ llvm::Value* FnDecl::Emit()
 	//branch entry bb to next bb
 	llvm::BranchInst *branch = llvm::BranchInst::Create(nextBB, entryBB);
 
-
+	symbolTable->pop();
 	
-/*
-	// create a function signature
-    std::vector<llvm::Type *> argTypes;
-    llvm::Type *intTy = irgen.GetIntType();
-    argTypes.push_back(intTy);
-    llvm::ArrayRef<llvm::Type *> argArray(argTypes);
-    llvm::FunctionType *funcTy = llvm::FunctionType::get(intTy, argArray, false);
-
-    // llvm::Function *f = llvm::cast<llvm::Function>(mod->getOrInsertFunction("foo", intTy, intTy, (Type *)0));
-    llvm::Function *f = llvm::cast<llvm::Function>(mod->getOrInsertFunction("foo", funcTy));
-    llvm::Argument *arg = f->arg_begin();
-    arg->setName("x");
-
-    // insert a block into the function
-    llvm::LLVMContext *context = irgen.GetContext();
-    llvm::BasicBlock *bb = llvm::BasicBlock::Create(*context, "entry", f);
-
-    // create a return instruction
-    llvm::Value *val = llvm::ConstantInt::get(intTy, 1);
-    llvm::Value *sum = llvm::BinaryOperator::CreateAdd(arg, val, "", bb);
-    llvm::ReturnInst::Create(*context, sum, bb);
-*/
-
 	return llvm::UndefValue::get(irgen->GetVoidType());
 }
 

@@ -158,7 +158,7 @@ class ContinueStmt : public Stmt
     ContinueStmt(yyltype loc) : Stmt(loc) {}
     const char *GetPrintNameForNode() { return "ContinueStmt"; }
 
-
+	llvm::Value* Emit();
 };
 
 class ReturnStmt : public Stmt  
